@@ -90,7 +90,7 @@ def show_performance_summary(symbol='BTCUSDT'):
     print("\n" + "="*80)
     print("TRADE HISTORY & PnL PER TRADE")
     print("="*80)
-    print(pnl_df.tail(35))  # Show last trades
+    print(pnl_df.tail(60))  # Show last trades
 
     print("\n" + "="*80)
     print("PERFORMANCE SUMMARY")
