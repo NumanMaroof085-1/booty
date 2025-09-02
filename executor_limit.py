@@ -122,10 +122,9 @@ def place_stop_order(side, quantity, stop_price):
     except Exception as e:
         ex = f"✗ Error placing STOP {side}: {e}"
         print(ex)
-        with open(LOG_FILE, mode="a", newline="") as f:
+        with open(LOG_FILE, mode="a", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
-            writer.writerow([ex])   # fixed logging
-
+            writer.writerow([ex])
         if "Stop price would trigger immediately" in str(e):
             if side == 'BUY':
                 # ⚠ optional: cancel only buy-stop orders, not everything
