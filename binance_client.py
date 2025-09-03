@@ -4,8 +4,10 @@ import pandas as pd
 import requests
 import os
 import time
-# import functools
 import random
+
+# Change this to False if you are trading live account
+TESTNET = True
 
 # ======================
 # Retry Wrapper
@@ -39,22 +41,25 @@ def safe_api_call(func, *args, retries=5, delay=3, backoff=2, jitter=True, **kwa
 # ======================
 # Binance Client
 # ======================
-api_key_live = "api_key"  # from Binance app
+api_key_live = "Mf7g8cYyWuHJT0MPwHVzioCDaiyhXJJvP4Xp8p7m4rhov0IXzFzTbiAaztdp9e4W"  # from Binance app
 
-def get_binance_client():
+def get_binance_client(testnet=TESTNET):
     """
-    Creates and returns an authenticated Binance Client instance connected to the TESTNET.
-    Reads API keys from environment variables.
+    Creates and returns an authenticated Binance Client instance.
+    Defaults to TESTNET unless testnet=False is passed.
     """
-    api_key = os.environ.get('BINANCE_TESTNET_API_KEY')
-    api_secret = os.environ.get('BINANCE_TESTNET_SECRET_KEY')
+    if testnet:
+        api_key = os.environ.get('BINANCE_TESTNET_API_KEY')
+        api_secret = os.environ.get('BINANCE_TESTNET_SECRET_KEY')
+    else:
+        api_key = os.environ.get('BINANCE_LIVE_API_KEY')
+        api_secret = os.environ.get('BINANCE_LIVE_SECRET_KEY')
 
     if not api_key or not api_secret:
-        raise ValueError("Could not find Binance API keys in environment variables. "
-                         "Please set 'BINANCE_TESTNET_API_KEY' and 'BINANCE_TESTNET_SECRET_KEY'.")
+        raise ValueError("Missing Binance API keys in environment variables.")
 
-    # The 'testnet=True' flag is crucial to point to the testnet environment
-    return safe_api_call(Client, api_key, api_secret, testnet=True)
+    return Client(api_key, api_secret, testnet=testnet)
+
 
 # ======================
 # Live Kline Fetcher
