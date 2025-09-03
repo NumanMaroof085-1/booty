@@ -1,14 +1,9 @@
 # main.py
 from executor_limit import execute_strategy_limit
+from datetime import datetime
 import time
 
 print("Starting Channel Breakout Bot...")
-# while True:
-#     execute_strategy_limit()
-#     time.sleep(10)  #Check every 30 seconds
-    
-# import time
-from datetime import datetime
 
 while True:
     now = datetime.now()
