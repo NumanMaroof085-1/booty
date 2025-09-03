@@ -3,8 +3,44 @@ from binance.client import Client
 import pandas as pd
 import requests
 import os
+import time
+# import functools
+import random
 
-api_key_live = "Mf7g8cYyWuHJT0MPwHVzioCDaiyhXJJvP4Xp8p7m4rhov0IXzFzTbiAaztdp9e4W"  # from Binance app
+# ======================
+# Retry Wrapper
+# ======================
+def safe_api_call(func, *args, retries=5, delay=3, backoff=2, jitter=True, **kwargs):
+    """
+    Safe API call with retries for handling connection/DNS issues.
+    - retries: how many times to retry
+    - delay: initial delay between retries (seconds)
+    - backoff: multiplier to increase delay each retry
+    - jitter: add random +/- 20% randomness to delay
+    """
+    attempt = 0
+    while attempt < retries:
+        try:
+            return func(*args, **kwargs)
+        except (requests.exceptions.RequestException, Exception) as e:
+            attempt += 1
+            wait = delay * (backoff ** (attempt - 1))
+            if jitter:
+                wait = wait * random.uniform(0.8, 1.2)
+
+            print(f"⚠ API call failed (attempt {attempt}/{retries}): {e}")
+            if attempt < retries:
+                print(f"⏳ Retrying in {wait:.2f}s...")
+                time.sleep(wait)
+            else:
+                print("❌ Max retries reached. Raising exception.")
+                raise
+
+# ======================
+# Binance Client
+# ======================
+api_key_live = "api_key"  # from Binance app
+
 def get_binance_client():
     """
     Creates and returns an authenticated Binance Client instance connected to the TESTNET.
@@ -18,23 +54,16 @@ def get_binance_client():
                          "Please set 'BINANCE_TESTNET_API_KEY' and 'BINANCE_TESTNET_SECRET_KEY'.")
 
     # The 'testnet=True' flag is crucial to point to the testnet environment
-    return Client(api_key, api_secret, testnet=True)
+    return safe_api_call(Client, api_key, api_secret, testnet=True)
 
+# ======================
+# Live Kline Fetcher
+# ======================
 def fetch_live_klines(symbol, interval, limit=500, api_key_live=None):
     """
     Fetches live kline (OHLCV) data from Binance using a live account API key
     and returns a cleaned pandas DataFrame.
-
-    Args:
-        symbol (str): Trading symbol, e.g., 'BTCUSDT'
-        interval (str): Kline interval, e.g., '1m', '5m', '1h'
-        limit (int): Number of candles to fetch (max 1000)
-        api_key (str): Your Binance API key
-
-    Returns:
-        pd.DataFrame: DataFrame with columns ['timestamp', 'open', 'high', 'low', 'close', 'volume']
     """
-    
     url = "https://api.binance.com/api/v3/klines"
     params = {
         "symbol": symbol.upper(),
@@ -45,8 +74,9 @@ def fetch_live_klines(symbol, interval, limit=500, api_key_live=None):
     if api_key_live:
         headers["X-MBX-APIKEY"] = api_key_live
 
-    response = requests.get(url, headers=headers, params=params)
-    response.raise_for_status()  # Raise error if request failed
+    # wrap the GET call with safe_api_call
+    response = safe_api_call(requests.get, url, headers=headers, params=params)
+    response.raise_for_status()
     klines = response.json()
 
     # Create DataFrame
@@ -68,7 +98,6 @@ def fetch_live_klines(symbol, interval, limit=500, api_key_live=None):
     df['upBound'] = df['high'].rolling(window=1).max().shift(1)
     df['downBound'] = df['low'].rolling(window=1).min().shift(1)
 
-    # Return only essential columns
     return df[['timestamp', 'open', 'high', 'low', 'close', 'volume','upBound','downBound']]
 
 
